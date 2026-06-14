@@ -190,38 +190,80 @@
     }
 
     /* Mobile controls */
-    #joystick-zone {
+    /* Control bar bottom */
+    #control-bar {
       position: fixed;
       bottom: 0; left: 0; right: 0;
-      height: 38%;
-      z-index: 5;
+      height: 90px;
+      z-index: 15;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px 12px;
+      background: linear-gradient(to top, rgba(5,7,20,0.85), transparent);
+      pointer-events: none;
+    }
+
+    .ctrl-btn {
+      pointer-events: all;
       touch-action: none;
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 900;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    #btn-left {
+      background: rgba(124,58,237,0.25);
+      border: 2px solid rgba(124,58,237,0.6);
+      box-shadow: 0 0 14px rgba(124,58,237,0.3);
+      color: #a78bfa;
+    }
+
+    #btn-right {
+      background: rgba(124,58,237,0.25);
+      border: 2px solid rgba(124,58,237,0.6);
+      box-shadow: 0 0 14px rgba(124,58,237,0.3);
+      color: #a78bfa;
     }
 
     #fire-btn {
-      position: fixed;
-      bottom: 28px;
-      right: 24px;
+      pointer-events: all;
+      touch-action: none;
       width: 72px;
       height: 72px;
       border-radius: 50%;
       background: radial-gradient(circle at 40% 35%, #f59e0b, #d97706 60%, #92400e);
-      border: 2px solid rgba(245,158,11,0.7);
+      border: 2px solid rgba(245,158,11,0.8);
       color: #fff;
-      font-size: 24px;
+      font-family: 'Orbitron', monospace;
+      font-size: 9px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      z-index: 15;
-      box-shadow: 0 0 24px rgba(245,158,11,0.5);
-      cursor: pointer;
-      touch-action: none;
-      font-family: 'Orbitron', monospace;
-      font-size: 10px;
-      font-weight: 700;
-      color: #fff;
       gap: 2px;
+      box-shadow: 0 0 20px rgba(245,158,11,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    #joystick-zone {
+      position: fixed;
+      bottom: 90px; left: 0; right: 0;
+      height: 30%;
+      z-index: 5;
+      touch-action: none;
     }
 
     #level-announce {
@@ -262,7 +304,11 @@
 
 <!-- Mobile controls -->
 <div id="joystick-zone"></div>
-<div id="fire-btn">🔥<br>FIRE</div>
+<div id="control-bar">
+  <button class="ctrl-btn" id="btn-left">◀</button>
+  <div id="fire-btn">🔥<br>FIRE</div>
+  <button class="ctrl-btn" id="btn-right">▶</button>
+</div>
 
 <!-- ═══ START SCREEN ═══ -->
 <div class="overlay" id="start-screen">
@@ -363,7 +409,7 @@ function initGame() {
   enemyInterval = 85; enemySpeed = 1.7; bCooldown = 16; shootTimer = 0;
 
   player = {
-    x: canvas.width / 2, y: canvas.height - 80,
+    x: canvas.width / 2, y: canvas.height - 110,
     w: PW, h: PH, speed: 5.5,
     shield: false, shieldTimer: 0,
     thruster: 0, invincible: 0
@@ -628,7 +674,23 @@ document.getElementById('joystick-zone').addEventListener('touchend', () => touc
 let autoFire = false;
 const fireBtn = document.getElementById('fire-btn');
 fireBtn.addEventListener('touchstart', e => { autoFire = true; e.preventDefault(); }, {passive:false});
-fireBtn.addEventListener('touchend', () => autoFire = false);
+fireBtn.addEventListener('touchend', e => { autoFire = false; e.preventDefault(); }, {passive:false});
+fireBtn.addEventListener('mousedown', () => autoFire = true);
+fireBtn.addEventListener('mouseup', () => autoFire = false);
+
+// Left/Right buttons
+const btnLeft = document.getElementById('btn-left');
+const btnRight = document.getElementById('btn-right');
+
+btnLeft.addEventListener('touchstart', e => { keys['ArrowLeft'] = true; e.preventDefault(); }, {passive:false});
+btnLeft.addEventListener('touchend', e => { keys['ArrowLeft'] = false; e.preventDefault(); }, {passive:false});
+btnLeft.addEventListener('mousedown', () => keys['ArrowLeft'] = true);
+btnLeft.addEventListener('mouseup', () => keys['ArrowLeft'] = false);
+
+btnRight.addEventListener('touchstart', e => { keys['ArrowRight'] = true; e.preventDefault(); }, {passive:false});
+btnRight.addEventListener('touchend', e => { keys['ArrowRight'] = false; e.preventDefault(); }, {passive:false});
+btnRight.addEventListener('mousedown', () => keys['ArrowRight'] = true);
+btnRight.addEventListener('mouseup', () => keys['ArrowRight'] = false);
 
 function playerShoot() {
   // Cyan DLI laser
