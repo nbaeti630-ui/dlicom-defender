@@ -767,9 +767,9 @@ function spawnTokens(x, y) {
 function spawnPowerup(x, y) {
   if (Math.random() > 0.28) return;
   const types = [
-    { id:'shield', icon:'🛡️', label:'SMART CONTRACT', color:'#06b6d4' },
-    { id:'rapid',  icon:'⚡', label:'FLASH LOAN',    color:'#f59e0b' },
-    { id:'bomb',   icon:'💣', label:'DAO BOMB',       color:'#ef4444' },
+    { id:'shield', icon:'🛡️', label:'SHIELD', color:'#06b6d4' },
+    { id:'rapid',  icon:'⚡', label:'RAPID FIRE', color:'#f59e0b' },
+    { id:'bomb',   icon:'💣', label:'NUKE ALL', color:'#ef4444' },
   ];
   powerups.push({
     x, y, vy: 1.4, life: 1, decay: 0.003,
@@ -844,7 +844,8 @@ jzone.addEventListener('touchstart', e => {
           showAnnounce('💥 DAO BOMB — ALL THREATS CLEARED');
         }
         spawnParticles(p.x, p.y, p.type.color, 14, true);
-        showAnnounce(p.type.icon + ' ' + p.type.label + ' ACTIVATED!');
+        const announceMap = { shield: '🛡️ SHIELD ON — INVINCIBLE!', rapid: '⚡ RAPID FIRE!', bomb: '💣 NUKE ALL — CLEAR SCREEN!' };
+        showAnnounce(announceMap[p.type.id] || p.type.icon + ' ' + p.type.label);
         break;
       }
     }
@@ -928,9 +929,9 @@ function gameLoop() {
   }
 
   // Wave system
-  const MAX_ENEMIES_SCREEN = 5 + wave;
   if (waveActive) {
-    if (enemies.length < MAX_ENEMIES_SCREEN && enemiesSpawnedThisWave < waveEnemiesLeft && frame % enemyInterval === 0) {
+    // Spawn enemies with interval, no screen cap (wave total is the limit)
+    if (enemiesSpawnedThisWave < waveEnemiesLeft && frame % enemyInterval === 0) {
       spawnEnemy();
       enemiesSpawnedThisWave++;
     }
@@ -1285,7 +1286,7 @@ if (localStorage.getItem('dlicom_task_done')) {
 
 // ── Mascot System ──
 const MASCOT_BUFFS = [
-  { id:'shield', icon:'🛡️', label:'SMART CONTRACT SHIELD', color:'#06b6d4' },
+  { id:'shield', icon:'🛡️', label:'SHIELD ON — INVINCIBLE!', color:'#06b6d4' },
   { id:'rapid',  icon:'⚡', label:'FLASH LOAN FIRE',       color:'#f59e0b' },
   { id:'bomb',   icon:'💣', label:'DAO BOMB ACTIVATED',    color:'#ef4444' },
   { id:'life',   icon:'❤️', label:'EXTRA LIFE +1',         color:'#22c55e' },
