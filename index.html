@@ -248,6 +248,70 @@
       padding: 3px 10px;
     }
 
+
+    /* Username input */
+    .username-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      max-width: 280px;
+    }
+    .username-wrap label {
+      color: #a78bfa;
+      font-family: 'Orbitron', monospace;
+      font-size: 11px;
+      letter-spacing: 1px;
+    }
+    #username-input {
+      width: 100%;
+      background: rgba(124,58,237,0.15);
+      border: 1px solid rgba(124,58,237,0.5);
+      border-radius: 12px;
+      padding: 10px 16px;
+      color: #e0d9ff;
+      font-family: 'Orbitron', monospace;
+      font-size: 14px;
+      text-align: center;
+      outline: none;
+    }
+    #username-input::placeholder { color: rgba(167,139,250,0.4); }
+    #username-input:focus { border-color: #7c3aed; box-shadow: 0 0 12px rgba(124,58,237,0.3); }
+
+    /* Leaderboard */
+    #leaderboard-wrap {
+      width: 100%;
+      max-width: 320px;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    .lb-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 12px;
+      color: var(--dli-gold);
+      letter-spacing: 2px;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .lb-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 12px;
+      border-radius: 8px;
+      margin-bottom: 3px;
+      font-size: 13px;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 600;
+    }
+    .lb-row.me { background: rgba(124,58,237,0.3); border: 1px solid rgba(124,58,237,0.5); }
+    .lb-row:not(.me) { background: rgba(255,255,255,0.04); }
+    .lb-rank { color: #a78bfa; width: 24px; font-family:'Orbitron',monospace; font-size:11px; }
+    .lb-name { flex: 1; color: #e0e0ff; margin: 0 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lb-score { color: var(--dli-gold); font-family:'Orbitron',monospace; font-size:11px; }
+    .lb-loading { color: #666; font-size: 12px; text-align: center; padding: 16px; }
+
     #canvas-stars { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
     #game { position: relative; z-index: 1; }
   </style>
@@ -286,6 +350,10 @@
     🔥 Tombol FIRE untuk menembak<br>
     💻 PC: ← → gerak · SPACE tembak
   </div>
+  <div class="username-wrap">
+    <label>CALLSIGN / USERNAME</label>
+    <input id="username-input" type="text" maxlength="16" placeholder="Enter your name..." autocomplete="off" />
+  </div>
   <button class="btn" id="start-btn">▶ LAUNCH MISSION</button>
 </div>
 
@@ -297,6 +365,10 @@
   <div class="score-big" id="final-score">0</div>
   <div class="score-unit">$DLI EARNED</div>
   <p id="final-msg" class="desc"></p>
+  <div id="leaderboard-wrap">
+    <div class="lb-title">🏆 GLOBAL LEADERBOARD</div>
+    <div id="lb-rows"><div class="lb-loading">Loading scores...</div></div>
+  </div>
   <button class="btn" id="restart-btn">🔄 RETRY TX</button>
 </div>
 
@@ -996,7 +1068,49 @@ function gameLoop() {
   updateHUD();
 }
 
+
+// ── Firebase Leaderboard ──
+const FB_URL = 'https://dlicom-defender-default-rtdb.asia-southeast1.firebasedatabase.app';
+let playerName = 'Anonymous';
+
+async function saveScore(name, score, wave) {
+  try {
+    const entry = { name: name.slice(0,16), score, wave, ts: Date.now() };
+    await fetch(`${FB_URL}/leaderboard.json`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry)
+    });
+  } catch(e) { console.log('Save failed', e); }
+}
+
+async function loadLeaderboard(myScore) {
+  const container = document.getElementById('lb-rows');
+  try {
+    const res = await fetch(`${FB_URL}/leaderboard.json`);
+    const data = await res.json();
+    if (!data) { container.innerHTML = '<div class="lb-loading">No scores yet. Be first!</div>'; return; }
+
+    // Flatten + sort
+    const entries = Object.values(data).sort((a,b) => b.score - a.score).slice(0,10);
+
+    container.innerHTML = entries.map((e,i) => {
+      const isMe = e.score === myScore && e.name === playerName;
+      const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}.`;
+      return `<div class="lb-row ${isMe?'me':''}">
+        <span class="lb-rank">${medal}</span>
+        <span class="lb-name">${e.name}</span>
+        <span class="lb-score">${e.score.toLocaleString()} $DLI</span>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    container.innerHTML = '<div class="lb-loading">Could not load scores.</div>';
+  }
+}
+
 function startGame() {
+  const inp = document.getElementById('username-input');
+  playerName = (inp && inp.value.trim()) ? inp.value.trim() : 'Anonymous';
   document.getElementById('start-screen').style.display = 'none';
   document.getElementById('gameover-screen').style.display = 'none';
   initGame();
@@ -1017,6 +1131,10 @@ function endGame() {
   if (tg) {
     try { tg.sendData?.(JSON.stringify({ score, level, hiScore, game:'dlicom-defender' })); } catch(e) {}
   }
+
+  // Save to global leaderboard
+  saveScore(playerName, score, wave);
+  loadLeaderboard(score);
 }
 
 document.getElementById('start-btn').addEventListener('click', startGame);
