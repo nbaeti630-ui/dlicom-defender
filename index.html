@@ -935,7 +935,7 @@ function gameLoop() {
       enemiesSpawnedThisWave++;
     }
     // Wave cleared?
-    if (enemiesSpawnedThisWave >= waveEnemiesLeft && enemies.length === 0 && enemyBullets.length === 0) {
+    if (enemiesSpawnedThisWave >= waveEnemiesLeft && enemies.length === 0) {
       waveActive = false;
       waveBreak = 180; // 3 seconds break
       score += wave * 50; // wave clear bonus
@@ -1000,7 +1000,7 @@ function gameLoop() {
   bullets.forEach(b => b.y += b.vy);
 
   // Move enemy bullets
-  enemyBullets = enemyBullets.filter(b => b.y < canvas.height + 20);
+  enemyBullets = enemyBullets.filter(b => b.y > -30 && b.y < canvas.height + 30 && b.x > -30 && b.x < canvas.width + 30);
   enemyBullets.forEach(b => { b.x += b.vx; b.y += b.vy; });
 
   // Move enemies
