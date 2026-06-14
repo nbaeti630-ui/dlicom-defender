@@ -214,6 +214,40 @@
       transition: opacity 0.3s;
     }
 
+    #combo-display {
+      position: fixed;
+      top: 56px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 12;
+      font-family: 'Orbitron', monospace;
+      font-size: 1.1rem;
+      font-weight: 900;
+      color: #f59e0b;
+      text-shadow: 0 0 12px rgba(245,158,11,0.8);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      white-space: nowrap;
+    }
+
+    #wave-display {
+      position: fixed;
+      top: 56px;
+      right: 12px;
+      z-index: 12;
+      font-family: 'Orbitron', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: #a78bfa;
+      text-shadow: 0 0 8px rgba(167,139,250,0.6);
+      pointer-events: none;
+      background: rgba(124,58,237,0.15);
+      border: 1px solid rgba(124,58,237,0.3);
+      border-radius: 12px;
+      padding: 3px 10px;
+    }
+
     #canvas-stars { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
     #game { position: relative; z-index: 1; }
   </style>
@@ -232,6 +266,8 @@
 
 <!-- Level announce -->
 <div id="level-announce"></div>
+<div id="combo-display"></div>
+<div id="wave-display">WAVE 1</div>
 
 <!-- Mobile controls: full-screen swipe zone -->
 <div id="joystick-zone"></div>
@@ -332,12 +368,26 @@ let state = 'idle';
 let score = 0, hiScore = 0, lives = 3, level = 1, frame = 0;
 let enemyInterval, enemySpeed, bCooldown, shootTimer = 0;
 let player, bullets, enemies, enemyBullets, particles, tokens, powerups;
+let wave = 1, waveEnemiesLeft = 6, waveBreak = 0, waveActive = true;
+let enemiesSpawnedThisWave = 0, enemiesKilledThisWave = 0;
+let combo = 1, comboTimer = 0, lastKillFrame = 0;
+let shakeX = 0, shakeY = 0, shakeDur = 0;
 
 const PW = 38, PH = 48;
 
 function initGame() {
   score = 0; lives = 3; level = 1; frame = 0;
-  enemyInterval = 100; enemySpeed = 1.1; bCooldown = 14; shootTimer = 0;
+  enemyInterval = 120; enemySpeed = 1.0; bCooldown = 14; shootTimer = 0;
+
+  // Wave system
+  wave = 1; waveEnemiesLeft = 6; waveBreak = 0; waveActive = true;
+  enemiesSpawnedThisWave = 0; enemiesKilledThisWave = 0;
+
+  // Combo system
+  combo = 1; comboTimer = 0; lastKillFrame = 0;
+
+  // Screen shake
+  shakeX = 0; shakeY = 0; shakeDur = 0;
 
   player = {
     x: canvas.width / 2, y: canvas.height - 90,
@@ -620,8 +670,10 @@ function playerShoot() {
 
 function updateHUD() {
   document.getElementById('score-val').textContent = score.toLocaleString();
-  document.getElementById('level-val').textContent = level;
+  document.getElementById('level-val').textContent = wave;
   document.getElementById('lives-val').textContent = lives;
+  document.getElementById('wave-display').textContent =
+    waveActive ? \`WAVE \${wave} [\${enemiesKilledThisWave}/\${waveEnemiesLeft}]\` : \`⏳ NEXT WAVE...\`;
 }
 
 // Level announce
@@ -662,8 +714,45 @@ function gameLoop() {
       document.getElementById('level-announce').style.opacity = 0;
   }
 
-  // Spawn
-  if (frame % enemyInterval === 0) spawnEnemy();
+  // Wave system
+  const MAX_ENEMIES_SCREEN = 5 + wave;
+  if (waveActive) {
+    if (enemies.length < MAX_ENEMIES_SCREEN && enemiesSpawnedThisWave < waveEnemiesLeft && frame % enemyInterval === 0) {
+      spawnEnemy();
+      enemiesSpawnedThisWave++;
+    }
+    // Wave cleared?
+    if (enemiesSpawnedThisWave >= waveEnemiesLeft && enemies.length === 0 && enemyBullets.length === 0) {
+      waveActive = false;
+      waveBreak = 180; // 3 seconds break
+      score += wave * 50; // wave clear bonus
+      showAnnounce(\`✅ WAVE \${wave} CLEAR! +\${wave*50} $DLI\`);
+    }
+  } else {
+    // Wave break countdown
+    waveBreak--;
+    if (waveBreak <= 0) {
+      wave++;
+      waveEnemiesLeft = 5 + wave * 2;
+      enemiesSpawnedThisWave = 0;
+      enemiesKilledThisWave = 0;
+      waveActive = true;
+      enemySpeed = 1.0 + (wave-1)*0.2;
+      enemyInterval = Math.max(45, 120 - (wave-1)*8);
+      document.getElementById('wave-display').textContent = \`WAVE \${wave}\`;
+      showAnnounce(\`⚡ WAVE \${wave} — \${waveEnemiesLeft} ENEMIES\`);
+      level = Math.ceil(wave / 2);
+    }
+  }
+
+  // Combo timer decay
+  if (combo > 1) {
+    comboTimer--;
+    if (comboTimer <= 0) {
+      combo = 1;
+      document.getElementById('combo-display').style.opacity = '0';
+    }
+  }
 
   // Move player
   if ((keys['ArrowLeft'] || keys['a']) && player)
@@ -720,7 +809,25 @@ function gameLoop() {
         e.hp--;
         spawnParticles(b.x, b.y, e.config.color, 5);
         if (e.hp <= 0) {
-          score += e.config.score * level;
+          // Combo system
+          if (frame - lastKillFrame < 90) {
+            combo = Math.min(combo + 1, 8);
+          } else {
+            combo = 1;
+          }
+          lastKillFrame = frame;
+          comboTimer = 90;
+          const earned = e.config.score * level * combo;
+          score += earned;
+
+          // Show combo
+          if (combo >= 2) {
+            const cd = document.getElementById('combo-display');
+            cd.textContent = combo <= 2 ? \`🔥 x\${combo} COMBO!\` : combo <= 4 ? \`⚡ x\${combo} ULTRA!\` : \`💥 x\${combo} GODLIKE!\`;
+            cd.style.opacity = '1';
+          }
+
+          enemiesKilledThisWave++;
           spawnParticles(e.x, e.y, e.config.color, e.config.shape==='boss' ? 28 : 14, e.config.shape==='boss');
           spawnTokens(e.x, e.y);
           spawnPowerup(e.x, e.y);
@@ -742,6 +849,7 @@ function gameLoop() {
         } else {
           lives--;
           player.invincible = 80;
+          shakeX = 8; shakeY = 6; shakeDur = 20;
           spawnParticles(player.x, player.y, '#ef4444', 20, true);
           if (lives <= 0) { endGame(); return; }
         }
@@ -796,6 +904,15 @@ function gameLoop() {
   particles = particles.filter(p => p.life > 0);
 
   // ── Draw ──
+
+  // Screen shake
+  if (shakeDur > 0) {
+    shakeDur--;
+    shakeX = (Math.random()-0.5) * shakeDur * 0.6;
+    shakeY = (Math.random()-0.5) * shakeDur * 0.4;
+    ctx.save();
+    ctx.translate(shakeX, shakeY);
+  }
 
   // Powerups
   powerups.forEach(p => {
@@ -864,6 +981,9 @@ function gameLoop() {
 
   // Player
   if (player) drawPlayer(player);
+
+  // End screen shake
+  if (shakeDur >= 0 && (shakeX !== 0 || shakeY !== 0)) ctx.restore();
 
   // Dlicom logo watermark
   if (dlicomLogo.complete && dlicomLogo.naturalWidth > 0) {
