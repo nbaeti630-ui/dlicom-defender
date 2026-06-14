@@ -435,6 +435,17 @@
     <input id="username-input" type="text" maxlength="16" placeholder="Enter your name..." autocomplete="off" />
   </div>
   <button class="btn" id="start-btn">▶ LAUNCH MISSION</button>
+
+  <!-- Leaderboard toggle -->
+  <div style="width:100%;max-width:300px;">
+    <button onclick="toggleLB()" style="width:100%;background:transparent;border:1px solid rgba(245,158,11,0.4);border-radius:12px;padding:8px;color:#f59e0b;font-family:'Orbitron',monospace;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+      🏆 <span id="lb-toggle-label">VIEW LEADERBOARD</span>
+    </button>
+    <div id="start-lb-wrap" style="display:none;margin-top:8px;">
+      <div class="lb-title" style="margin-bottom:6px;">🏆 TOP PLAYERS</div>
+      <div id="start-lb-rows"><div class="lb-loading">Loading...</div></div>
+    </div>
+  </div>
 </div>
 
 <!-- ═══ GAME OVER SCREEN ═══ -->
@@ -1181,6 +1192,38 @@ function gameLoop() {
 
 
 
+
+// Leaderboard toggle on start screen
+let lbVisible = false;
+function toggleLB() {
+  lbVisible = !lbVisible;
+  const wrap = document.getElementById('start-lb-wrap');
+  const label = document.getElementById('lb-toggle-label');
+  wrap.style.display = lbVisible ? 'block' : 'none';
+  label.textContent = lbVisible ? 'HIDE LEADERBOARD' : 'VIEW LEADERBOARD';
+  if (lbVisible) loadStartLB();
+}
+
+async function loadStartLB() {
+  const container = document.getElementById('start-lb-rows');
+  try {
+    const res = await fetch(`${FB_URL}/leaderboard.json`);
+    const data = await res.json();
+    if (!data) { container.innerHTML = '<div class="lb-loading">No scores yet — be first!</div>'; return; }
+    const entries = Object.values(data).sort((a,b) => b.score - a.score).slice(0,10);
+    container.innerHTML = entries.map((e,i) => {
+      const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}.`;
+      return `<div class="lb-row">
+        <span class="lb-rank">${medal}</span>
+        <span class="lb-name">${e.name}</span>
+        <span class="lb-score">${e.score.toLocaleString()} $DLI</span>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    container.innerHTML = '<div class="lb-loading">Could not load.</div>';
+  }
+}
+
 // Task system
 let taskBonusApplied = false;
 function markTaskDone(el) {
@@ -1238,6 +1281,7 @@ function spawnMascot() {
 }
 
 function applyMascotBuff(buff) {
+  const mx = mascot.x, my = mascot.y;
   if (buff.id === 'shield') { player.shield = true; player.shieldTimer = 400; }
   else if (buff.id === 'rapid') { bCooldown = Math.max(3, bCooldown - 4); }
   else if (buff.id === 'bomb') {
@@ -1246,7 +1290,8 @@ function applyMascotBuff(buff) {
   }
   else if (buff.id === 'life') { lives = Math.min(lives + 1, 5); updateHUD(); }
   showAnnounce(buff.icon + ' ' + buff.label + '!');
-  spawnParticles(mascot.x, mascot.y, buff.color, 20, true);
+  spawnParticles(mx, my, buff.color, 24, true);
+  mascot = null; // disappear immediately
 }
 
 function updateMascot() {
