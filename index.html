@@ -1016,6 +1016,7 @@ function gameLoop() {
   }
 
   // Move player
+  if (!player) return;
   if ((keys['ArrowLeft'] || keys['a']) && player)
     player.x = Math.max(PW/2, player.x - player.speed);
   if ((keys['ArrowRight'] || keys['d']) && player)
@@ -1105,28 +1106,31 @@ function gameLoop() {
   enemies = enemies.filter(e => !e._dead && e.y < canvas.height + 80);
 
   // Enemy bullet–player
-  if (player.invincible === 0) {
-    enemyBullets.forEach(b => {
-      if (collide(b, player, 5, 14)) {
-        b._dead = true;
-        if (player.shield) {
-          spawnParticles(player.x, player.y, '#06b6d4', 8);
-        } else {
-          lives--;
-          player.invincible = 80;
-          shakeX = 8; shakeY = 6; shakeDur = 20;
-          spawnParticles(player.x, player.y, '#ef4444', 20, true);
-          playSound('playerHit');
-          if (lives <= 0) { triggerDeath(); return; }
-        }
+  for (let i = 0; i < enemyBullets.length; i++) {
+    const b = enemyBullets[i];
+    if (!player || player.invincible > 0) break;
+    if (collide(b, player, 5, 14)) {
+      b._dead = true;
+      if (player.shield) {
+        spawnParticles(player.x, player.y, '#06b6d4', 8);
+      } else {
+        lives--;
+        player.invincible = 80;
+        shakeX = 8; shakeY = 6; shakeDur = 20;
+        spawnParticles(player.x, player.y, '#ef4444', 20, true);
+        playSound('playerHit');
+        if (lives <= 0) { triggerDeath(); break; }
       }
-    });
+    }
   }
   enemyBullets = enemyBullets.filter(b => !b._dead);
+  if (state !== 'playing') return;
 
   // Enemy–player
-  enemies.forEach(e => {
-    if (player.invincible === 0 && collide(e, player, e.config.shape==='boss'?26:16, 14)) {
+  for (let i = 0; i < enemies.length; i++) {
+    const e = enemies[i];
+    if (!player || player.invincible > 0) break;
+    if (collide(e, player, e.config.shape==='boss'?26:16, 14)) {
       e._dead = true;
       if (!player.shield) {
         lives--;
@@ -1134,16 +1138,16 @@ function gameLoop() {
         shakeX = 8; shakeY = 6; shakeDur = 20;
         spawnParticles(player.x, player.y, '#ef4444', 20, true);
         playSound('playerHit');
-        if (lives <= 0) { triggerDeath(); return; }
+        if (lives <= 0) { triggerDeath(); break; }
       }
     }
-  });
+  }
   enemies = enemies.filter(e => !e._dead);
 
   // Powerups
   powerups.forEach(p => {
     p.y += p.vy; p.anim += 0.07; p.life -= p.decay;
-    if (collide(p, player, 14, 20)) {
+    if (player && collide(p, player, 14, 20)) {
       p._dead = true;
       if (p.type.id === 'shield') { player.shield = true; player.shieldTimer = 320; }
       else if (p.type.id === 'rapid') { bCooldown = Math.max(4, bCooldown-3); }
