@@ -189,6 +189,57 @@
       cursor: pointer;
     }
 
+    .task-banner {
+      width: 100%;
+      max-width: 300px;
+      background: linear-gradient(135deg, rgba(6,182,212,0.12), rgba(124,58,237,0.12));
+      border: 1px solid rgba(6,182,212,0.4);
+      border-radius: 14px;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .task-banner:active { background: rgba(6,182,212,0.2); }
+    .task-banner-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .task-banner-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, #06b6d4, #0284c7);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .task-banner-text { text-align: left; }
+    .task-banner-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      color: #e0d9ff;
+      letter-spacing: 0.5px;
+    }
+    .task-banner-sub {
+      font-size: 11px;
+      color: #06b6d4;
+      margin-top: 2px;
+    }
+    .task-banner-reward {
+      font-family: 'Orbitron', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      color: #f59e0b;
+      text-shadow: 0 0 8px rgba(245,158,11,0.5);
+      white-space: nowrap;
+    }
+
     /* Mobile controls */
     #joystick-zone {
       position: fixed;
@@ -350,6 +401,17 @@
     🔥 Tombol FIRE untuk menembak<br>
     💻 PC: ← → gerak · SPACE tembak
   </div>
+  <a class="task-banner" href="https://t.me/DlicomAppOfficial" target="_blank" onclick="markTaskDone(this)">
+    <div class="task-banner-left">
+      <div class="task-banner-icon">✈️</div>
+      <div class="task-banner-text">
+        <div class="task-banner-title">DAILY TASK</div>
+        <div class="task-banner-sub">Join Dlicom Official Telegram</div>
+      </div>
+    </div>
+    <div class="task-banner-reward" id="task-reward">+500 $DLI</div>
+  </a>
+
   <div class="username-wrap">
     <label>CALLSIGN / USERNAME</label>
     <input id="username-input" type="text" maxlength="16" placeholder="Enter your name..." autocomplete="off" />
@@ -1069,6 +1131,31 @@ function gameLoop() {
 }
 
 
+
+// Task system
+let taskBonusApplied = false;
+function markTaskDone(el) {
+  if (!taskBonusApplied) {
+    taskBonusApplied = true;
+    el.style.borderColor = 'rgba(34,197,94,0.6)';
+    el.style.background = 'rgba(34,197,94,0.1)';
+    document.getElementById('task-reward').textContent = '✅ JOINED';
+    document.getElementById('task-reward').style.color = '#22c55e';
+    localStorage.setItem('dlicom_task_done', '1');
+  }
+}
+
+// Check if already joined before
+if (localStorage.getItem('dlicom_task_done')) {
+  setTimeout(() => {
+    const r = document.getElementById('task-reward');
+    if (r) { r.textContent = '✅ JOINED'; r.style.color = '#22c55e'; }
+    const b = document.querySelector('.task-banner');
+    if (b) { b.style.borderColor = 'rgba(34,197,94,0.6)'; b.style.background = 'rgba(34,197,94,0.1)'; }
+    taskBonusApplied = true;
+  }, 100);
+}
+
 // ── Firebase Leaderboard ──
 const FB_URL = 'https://dlicom-defender-default-rtdb.asia-southeast1.firebasedatabase.app';
 let playerName = 'Anonymous';
@@ -1132,9 +1219,11 @@ function endGame() {
     try { tg.sendData?.(JSON.stringify({ score, level, hiScore, game:'dlicom-defender' })); } catch(e) {}
   }
 
+  // Apply task bonus
+  const finalScore = score + (taskBonusApplied ? 500 : 0);
   // Save to global leaderboard
-  saveScore(playerName, score, wave);
-  loadLeaderboard(score);
+  saveScore(playerName, finalScore, wave);
+  loadLeaderboard(finalScore);
 }
 
 document.getElementById('start-btn').addEventListener('click', startGame);
