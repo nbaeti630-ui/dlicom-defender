@@ -787,12 +787,14 @@ function spawnEnemy() {
   const cfg = ENEMY_TYPES[idx];
   const isBoss = cfg.shape === 'boss';
 
+  // All enemies same speed - direction random but magnitude fixed
+  const dir = Math.random() > 0.5 ? 1 : -1;
   enemies.push({
     x, y: -45,
     config: cfg,
-    vx: (Math.random()-0.5) * (isBoss ? 1.5 : 2.5),
-    vy: enemySpeed * (isBoss ? 0.5 : 1),
-    rot: 0, rotSpeed: (Math.random()-0.5) * (isBoss ? 0.02 : 0.05),
+    vx: dir * 1.2,
+    vy: enemySpeed,
+    rot: 0, rotSpeed: (Math.random()-0.5) * 0.04,
     hp: cfg.hp, maxHp: cfg.hp,
     shootTimer: Math.random()*60
   });
