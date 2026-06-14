@@ -447,7 +447,7 @@ function drawPlayer(p) {
 
   // Wings
   ctx.shadowBlur = 8; ctx.shadowColor = '#7c3aed';
-  [[1],[−1]].forEach(([dir]) => {
+  [[1],[-1]].forEach(([dir]) => {
     ctx.beginPath();
     ctx.moveTo(dir * (PW/2-4), PH/2-8);
     ctx.lineTo(dir * (PW/2+12), PH/2+4);
