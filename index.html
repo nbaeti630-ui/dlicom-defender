@@ -818,17 +818,44 @@ window.addEventListener('keyup', e => keys[e.key] = false);
 let autoFire = true;
 
 // Full-screen swipe to move
-let touchLastX = null;
+let touchLastX = null, touchLastY = null;
 const jzone = document.getElementById('joystick-zone');
 jzone.addEventListener('touchstart', e => {
   touchLastX = e.touches[0].clientX;
+  touchLastY = e.touches[0].clientY;
   const tx = e.touches[0].clientX, ty = e.touches[0].clientY;
-  // Check mascot tap
-  if (mascot && !mascot.tapped && state === 'playing') {
-    const dx = tx - mascot.x, dy = ty - mascot.y;
-    if (Math.sqrt(dx*dx+dy*dy) < 35) {
-      mascot.tapped = true;
-      applyMascotBuff(mascot.buff);
+
+  if (state === 'playing') {
+    // Check powerup tap
+    for (let i = powerups.length - 1; i >= 0; i--) {
+      const p = powerups[i];
+      const dx = tx - p.x, dy = ty - p.y;
+      if (Math.sqrt(dx*dx+dy*dy) < 30) {
+        p._dead = true;
+        if (p.type.id === 'shield') { player.shield = true; player.shieldTimer = 320; }
+        else if (p.type.id === 'rapid') { bCooldown = Math.max(4, bCooldown - 3); }
+        else if (p.type.id === 'bomb') {
+          enemies.forEach(en => {
+            score += en.config.score * level;
+            spawnParticles(en.x, en.y, en.config.color, 12);
+            spawnTokens(en.x, en.y);
+          });
+          enemies = [];
+          showAnnounce('💥 DAO BOMB — ALL THREATS CLEARED');
+        }
+        spawnParticles(p.x, p.y, p.type.color, 14, true);
+        showAnnounce(p.type.icon + ' ' + p.type.label + ' ACTIVATED!');
+        break;
+      }
+    }
+
+    // Check mascot tap - disappear immediately
+    if (mascot) {
+      const dx = tx - mascot.x, dy = ty - mascot.y;
+      if (Math.sqrt(dx*dx+dy*dy) < 40) {
+        applyMascotBuff(mascot.buff); // mascot = null is called inside
+        return; // don't move ship when tapping mascot
+      }
     }
   }
   e.preventDefault();
@@ -836,11 +863,14 @@ jzone.addEventListener('touchstart', e => {
 jzone.addEventListener('touchmove', e => {
   if (touchLastX === null || !player) return;
   const dx = e.touches[0].clientX - touchLastX;
-  player.x = Math.max(PW/2, Math.min(canvas.width-PW/2, player.x + dx * 1.5));
+  const dy = e.touches[0].clientY - touchLastY;
+  player.x = Math.max(PW/2, Math.min(canvas.width - PW/2, player.x + dx * 1.5));
+  player.y = Math.max(60, Math.min(canvas.height - 60, player.y + dy * 1.5));
   touchLastX = e.touches[0].clientX;
+  touchLastY = e.touches[0].clientY;
   e.preventDefault();
 }, {passive:false});
-jzone.addEventListener('touchend', () => { touchLastX = null; }, {passive:true});
+jzone.addEventListener('touchend', () => { touchLastX = null; touchLastY = null; }, {passive:true});
 
 function playerShoot() {
   // Cyan DLI laser
@@ -949,11 +979,15 @@ function gameLoop() {
   if ((keys['ArrowLeft'] || keys['a']) && player)
     player.x = Math.max(PW/2, player.x - player.speed);
   if ((keys['ArrowRight'] || keys['d']) && player)
-    player.x = Math.min(canvas.width-PW/2, player.x + player.speed);
+    player.x = Math.min(canvas.width - PW/2, player.x + player.speed);
+  if (keys['ArrowUp'] && player)
+    player.y = Math.max(60, player.y - player.speed);
+  if ((keys['ArrowDown'] || keys['s']) && player)
+    player.y = Math.min(canvas.height - 60, player.y + player.speed);
 
   // Shoot
   shootTimer++;
-  if ((keys[' '] || keys['ArrowUp'] || autoFire) && shootTimer >= bCooldown) {
+  if ((keys[' '] || autoFire) && shootTimer >= bCooldown) {
     playerShoot(); shootTimer = 0;
   }
 
