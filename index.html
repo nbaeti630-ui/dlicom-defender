@@ -190,78 +190,9 @@
     }
 
     /* Mobile controls */
-    /* Control bar bottom */
-    #control-bar {
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      height: 90px;
-      z-index: 15;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 16px 12px;
-      background: linear-gradient(to top, rgba(5,7,20,0.85), transparent);
-      pointer-events: none;
-    }
-
-    .ctrl-btn {
-      pointer-events: all;
-      touch-action: none;
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 22px;
-      font-weight: 900;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-      user-select: none;
-    }
-
-    #btn-left {
-      background: rgba(124,58,237,0.25);
-      border: 2px solid rgba(124,58,237,0.6);
-      box-shadow: 0 0 14px rgba(124,58,237,0.3);
-      color: #a78bfa;
-    }
-
-    #btn-right {
-      background: rgba(124,58,237,0.25);
-      border: 2px solid rgba(124,58,237,0.6);
-      box-shadow: 0 0 14px rgba(124,58,237,0.3);
-      color: #a78bfa;
-    }
-
-    #fire-btn {
-      pointer-events: all;
-      touch-action: none;
-      width: 72px;
-      height: 72px;
-      border-radius: 50%;
-      background: radial-gradient(circle at 40% 35%, #f59e0b, #d97706 60%, #92400e);
-      border: 2px solid rgba(245,158,11,0.8);
-      color: #fff;
-      font-family: 'Orbitron', monospace;
-      font-size: 9px;
-      font-weight: 900;
-      letter-spacing: 0.5px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 2px;
-      box-shadow: 0 0 20px rgba(245,158,11,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-      user-select: none;
-    }
-
     #joystick-zone {
       position: fixed;
-      bottom: 90px; left: 0; right: 0;
-      height: 30%;
+      inset: 0;
       z-index: 5;
       touch-action: none;
     }
@@ -302,13 +233,8 @@
 <!-- Level announce -->
 <div id="level-announce"></div>
 
-<!-- Mobile controls -->
+<!-- Mobile controls: full-screen swipe zone -->
 <div id="joystick-zone"></div>
-<div id="control-bar">
-  <button class="ctrl-btn" id="btn-left">◀</button>
-  <div id="fire-btn">🔥<br>FIRE</div>
-  <button class="ctrl-btn" id="btn-right">▶</button>
-</div>
 
 <!-- ═══ START SCREEN ═══ -->
 <div class="overlay" id="start-screen">
@@ -411,10 +337,10 @@ const PW = 38, PH = 48;
 
 function initGame() {
   score = 0; lives = 3; level = 1; frame = 0;
-  enemyInterval = 85; enemySpeed = 1.7; bCooldown = 16; shootTimer = 0;
+  enemyInterval = 100; enemySpeed = 1.1; bCooldown = 14; shootTimer = 0;
 
   player = {
-    x: canvas.width / 2, y: canvas.height - 110,
+    x: canvas.width / 2, y: canvas.height - 90,
     w: PW, h: PH, speed: 5.5,
     shield: false, shieldTimer: 0,
     thruster: 0, invincible: 0
@@ -664,38 +590,24 @@ const keys = {};
 window.addEventListener('keydown', e => keys[e.key] = true);
 window.addEventListener('keyup', e => keys[e.key] = false);
 
+// Auto fire always on
+let autoFire = true;
+
+// Full-screen swipe to move
 let touchLastX = null;
-document.getElementById('joystick-zone').addEventListener('touchstart', e => {
+const jzone = document.getElementById('joystick-zone');
+jzone.addEventListener('touchstart', e => {
   touchLastX = e.touches[0].clientX;
-}, {passive:true});
-document.getElementById('joystick-zone').addEventListener('touchmove', e => {
+  e.preventDefault();
+}, {passive:false});
+jzone.addEventListener('touchmove', e => {
   if (touchLastX === null || !player) return;
   const dx = e.touches[0].clientX - touchLastX;
-  player.x = Math.max(PW/2, Math.min(canvas.width-PW/2, player.x + dx*1.3));
+  player.x = Math.max(PW/2, Math.min(canvas.width-PW/2, player.x + dx * 1.5));
   touchLastX = e.touches[0].clientX;
-}, {passive:true});
-document.getElementById('joystick-zone').addEventListener('touchend', () => touchLastX = null);
-
-let autoFire = false;
-const fireBtn = document.getElementById('fire-btn');
-fireBtn.addEventListener('touchstart', e => { autoFire = true; e.preventDefault(); }, {passive:false});
-fireBtn.addEventListener('touchend', e => { autoFire = false; e.preventDefault(); }, {passive:false});
-fireBtn.addEventListener('mousedown', () => autoFire = true);
-fireBtn.addEventListener('mouseup', () => autoFire = false);
-
-// Left/Right buttons
-const btnLeft = document.getElementById('btn-left');
-const btnRight = document.getElementById('btn-right');
-
-btnLeft.addEventListener('touchstart', e => { keys['ArrowLeft'] = true; e.preventDefault(); }, {passive:false});
-btnLeft.addEventListener('touchend', e => { keys['ArrowLeft'] = false; e.preventDefault(); }, {passive:false});
-btnLeft.addEventListener('mousedown', () => keys['ArrowLeft'] = true);
-btnLeft.addEventListener('mouseup', () => keys['ArrowLeft'] = false);
-
-btnRight.addEventListener('touchstart', e => { keys['ArrowRight'] = true; e.preventDefault(); }, {passive:false});
-btnRight.addEventListener('touchend', e => { keys['ArrowRight'] = false; e.preventDefault(); }, {passive:false});
-btnRight.addEventListener('mousedown', () => keys['ArrowRight'] = true);
-btnRight.addEventListener('mouseup', () => keys['ArrowRight'] = false);
+  e.preventDefault();
+}, {passive:false});
+jzone.addEventListener('touchend', () => { touchLastX = null; }, {passive:true});
 
 function playerShoot() {
   // Cyan DLI laser
@@ -734,8 +646,8 @@ function gameLoop() {
   const newLevel = 1 + Math.floor(score / 350);
   if (newLevel > level) {
     level = newLevel;
-    enemySpeed = 1.7 + (level-1)*0.35;
-    enemyInterval = Math.max(32, 85 - (level-1)*8);
+    enemySpeed = 1.1 + (level-1)*0.25;
+    enemyInterval = Math.max(45, 100 - (level-1)*7);
     bCooldown = Math.max(7, 16 - (level-1)*2);
     showAnnounce(`⛓️ BLOCK ${level} — NETWORK UPGRADED`);
   }
@@ -788,7 +700,7 @@ function gameLoop() {
     if (e.shootTimer > sRate) {
       e.shootTimer = 0;
       const ang = Math.atan2(player.y - e.y, player.x - e.x);
-      const spd = e.config.shape === 'boss' ? 4.5 : 3;
+      const spd = e.config.shape === 'boss' ? 3.0 : 2.0;
       enemyBullets.push({ x:e.x, y:e.y, vx:Math.cos(ang)*spd, vy:Math.sin(ang)*spd, color:e.config.color });
       if (e.config.shape === 'boss') {
         // Spread shot
