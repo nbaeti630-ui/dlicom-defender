@@ -462,7 +462,7 @@ function initGame() {
   shakeX = 0; shakeY = 0; shakeDur = 0;
 
   player = {
-    x: canvas.width / 2, y: canvas.height - 90,
+    x: canvas.width / 2, y: canvas.height - 72,
     w: PW, h: PH, speed: 5.5,
     shield: false, shieldTimer: 0,
     thruster: 0, invincible: 0
@@ -472,102 +472,74 @@ function initGame() {
   updateHUD();
 }
 
-// ── Draw Player (DLI Rocket) ──
+// ── Draw Player (Dlicom Logo Ship) ──
 function drawPlayer(p) {
+  if (p.invincible > 0 && Math.floor(p.invincible / 4) % 2 === 0) return;
   ctx.save();
   ctx.translate(p.x, p.y);
 
-  // Invincibility flash
-  if (p.invincible > 0 && Math.floor(p.invincible / 4) % 2 === 0) {
-    ctx.restore(); return;
-  }
-
-  // Thruster flames
-  p.thruster += 0.18;
-  const fl = 16 + Math.sin(p.thruster) * 9;
-  const fLeft = 12 + Math.sin(p.thruster + 1) * 5;
-
-  // Left engine
-  const g1 = ctx.createLinearGradient(-12, 6, -12, 6 + fLeft);
-  g1.addColorStop(0, 'rgba(139,92,246,0.9)');
-  g1.addColorStop(1, 'rgba(139,92,246,0)');
-  ctx.beginPath(); ctx.moveTo(-18, 6); ctx.lineTo(-12, 6+fLeft); ctx.lineTo(-6, 6);
-  ctx.fillStyle = g1; ctx.fill();
-
-  // Right engine
-  const g2 = ctx.createLinearGradient(12, 6, 12, 6 + fLeft);
-  g2.addColorStop(0, 'rgba(139,92,246,0.9)');
-  g2.addColorStop(1, 'rgba(139,92,246,0)');
-  ctx.beginPath(); ctx.moveTo(6, 6); ctx.lineTo(12, 6+fLeft); ctx.lineTo(18, 6);
-  ctx.fillStyle = g2; ctx.fill();
-
-  // Center booster
-  const g3 = ctx.createLinearGradient(0, 10, 0, 10+fl);
-  g3.addColorStop(0, 'rgba(6,182,212,1)');
-  g3.addColorStop(0.5, 'rgba(124,58,237,0.7)');
-  g3.addColorStop(1, 'rgba(6,182,212,0)');
-  ctx.beginPath(); ctx.moveTo(-7, 8); ctx.lineTo(0, 10+fl); ctx.lineTo(7, 8);
-  ctx.fillStyle = g3; ctx.fill();
-
-  // Main body
-  ctx.shadowBlur = 16; ctx.shadowColor = '#7c3aed';
+  // Thruster flame beneath logo
+  p.thruster = (p.thruster || 0) + 0.18;
+  const fl = 14 + Math.sin(p.thruster) * 7;
+  const g = ctx.createLinearGradient(0, 18, 0, 18 + fl);
+  g.addColorStop(0, 'rgba(6,182,212,0.95)');
+  g.addColorStop(0.5, 'rgba(124,58,237,0.7)');
+  g.addColorStop(1, 'rgba(6,182,212,0)');
   ctx.beginPath();
-  ctx.moveTo(0, -PH/2);
-  ctx.lineTo(PW/2 - 4, PH/2 - 8);
-  ctx.lineTo(PW/2, PH/2);
-  ctx.lineTo(PW/2 - 10, PH/2 - 2);
-  ctx.lineTo(-PW/2 + 10, PH/2 - 2);
-  ctx.lineTo(-PW/2, PH/2);
-  ctx.lineTo(-PW/2 + 4, PH/2 - 8);
-  ctx.closePath();
+  ctx.moveTo(-8, 18); ctx.lineTo(0, 18 + fl); ctx.lineTo(8, 18);
+  ctx.fillStyle = g; ctx.fill();
 
-  const bodyGrad = ctx.createLinearGradient(-PW/2, -PH/2, PW/2, PH/2);
-  bodyGrad.addColorStop(0, '#a78bfa');
-  bodyGrad.addColorStop(0.5, '#7c3aed');
-  bodyGrad.addColorStop(1, '#4c1d95');
-  ctx.fillStyle = bodyGrad; ctx.fill();
-
-  // DLI text on ship
-  ctx.shadowBlur = 0;
-  ctx.font = 'bold 8px Orbitron, monospace';
-  ctx.fillStyle = '#e0d9ff';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('DLI', 0, 4);
-
-  // Cockpit
-  ctx.shadowBlur = 12; ctx.shadowColor = '#06b6d4';
-  ctx.beginPath();
-  ctx.ellipse(0, -PH/4, 8, 11, 0, 0, Math.PI*2);
-  const ckGrad = ctx.createRadialGradient(-2, -PH/4-3, 1, 0, -PH/4, 8);
-  ckGrad.addColorStop(0, '#e0f2fe');
-  ckGrad.addColorStop(0.6, '#06b6d4');
-  ckGrad.addColorStop(1, '#0e7490');
-  ctx.fillStyle = ckGrad; ctx.fill();
-
-  // Wings
-  ctx.shadowBlur = 8; ctx.shadowColor = '#7c3aed';
-  [[1],[-1]].forEach(([dir]) => {
+  // Side thrusters
+  [-16, 16].forEach(ox => {
+    const sg = ctx.createLinearGradient(ox, 16, ox, 16 + fl * 0.7);
+    sg.addColorStop(0, 'rgba(139,92,246,0.8)');
+    sg.addColorStop(1, 'rgba(139,92,246,0)');
     ctx.beginPath();
-    ctx.moveTo(dir * (PW/2-4), PH/2-8);
-    ctx.lineTo(dir * (PW/2+12), PH/2+4);
-    ctx.lineTo(dir * (PW/2-2), PH/2-2);
-    ctx.closePath();
-    ctx.fillStyle = '#5b21b6'; ctx.fill();
+    ctx.moveTo(ox - 4, 16); ctx.lineTo(ox, 16 + fl * 0.7); ctx.lineTo(ox + 4, 16);
+    ctx.fillStyle = sg; ctx.fill();
   });
+
+  // Glow ring around logo
+  ctx.shadowBlur = 20;
+  ctx.shadowColor = '#7c3aed';
+  ctx.beginPath();
+  ctx.arc(0, 0, 26, 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(124,58,237,${0.3 + 0.2 * Math.sin(frame * 0.08)})`;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Draw Dlicom logo image as ship
+  const size = 48;
+  if (dlicomLogo.complete && dlicomLogo.naturalWidth > 0) {
+    ctx.shadowBlur = 16;
+    ctx.shadowColor = '#06b6d4';
+    // Rounded clip
+    ctx.beginPath();
+    ctx.roundRect(-size/2, -size/2, size, size, 12);
+    ctx.clip();
+    ctx.drawImage(dlicomLogo, -size/2, -size/2, size, size);
+  } else {
+    // Fallback: DLI text
+    ctx.fillStyle = '#7c3aed';
+    ctx.beginPath(); ctx.arc(0, 0, 22, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 10px Orbitron, monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('DLI', 0, 0);
+  }
 
   // Shield
   if (p.shield) {
+    ctx.restore(); ctx.save(); ctx.translate(p.x, p.y);
     ctx.shadowBlur = 18; ctx.shadowColor = '#06b6d4';
-    ctx.beginPath();
-    ctx.arc(0, 0, 34, 0, Math.PI*2);
+    ctx.beginPath(); ctx.arc(0, 0, 34, 0, Math.PI*2);
     ctx.strokeStyle = `rgba(6,182,212,${0.4 + 0.3*Math.sin(frame*0.12)})`;
     ctx.lineWidth = 3; ctx.stroke();
-    // Hex pattern
-    ctx.strokeStyle = `rgba(6,182,212,${0.15 + 0.1*Math.sin(frame*0.12)})`;
-    ctx.lineWidth = 1;
     for (let i = 0; i < 6; i++) {
       const a = i * Math.PI/3 + frame * 0.01;
-      ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(a)*34, Math.sin(a)*34); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0,0);
+      ctx.lineTo(Math.cos(a)*34, Math.sin(a)*34);
+      ctx.strokeStyle = `rgba(6,182,212,0.12)`; ctx.lineWidth = 1; ctx.stroke();
     }
   }
 
